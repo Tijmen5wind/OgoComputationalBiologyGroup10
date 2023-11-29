@@ -1,3 +1,0 @@
-[submodule "src/python/fcd"]
-	path = src/python/fcd
-	url = git@gitlab.ethz.ch:moretm/fcd.git
