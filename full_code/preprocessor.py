@@ -7,6 +7,7 @@ import numpy as np
 from rdkit import Chem
 import sys
 import os
+from colorama import Fore
 
 np.random.seed(1)
 
@@ -60,6 +61,7 @@ class Preprocessor:
         # Remove possible created duplicates
         if self._duplicates_removed:
             self.remove_duplicates()
+
 
     def remove_token(self, t):
         """Remove token t from all elements of data
