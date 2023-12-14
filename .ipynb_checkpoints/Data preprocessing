@@ -1,0 +1,151 @@
+import numpy as np
+import pandas as pd
+from collections import OrderedDict
+from itertools import chain
+from rdkit import Chem
+from rdkit.Chem import Descriptors
+from sklearn.utils import shuffle
+from matplotlib import pyplot as plt
+import tensorflow as tf
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.models import Sequential, Model
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import Dropout
+from tensorflow.keras.layers import LSTM
+from colorama import Fore, Style
+from tensorflow.keras.layers import BatchNormalization
+from tensorflow.keras.losses import categorical_crossentropy
+from tensorflow.keras.optimizers import Adam
+from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
+from sklearn.model_selection import train_test_split
+import warnings
+warnings.filterwarnings('ignore', category=FutureWarning)
+
+def extract_smiles(csv_file_path, output_csv_file, limit=1000):
+    # Read the CSV file
+    data = pd.read_csv(csv_file_path)
+
+    # Extract the first 'limit' number of SMILES
+    subset = data.iloc[:limit]
+
+    # Save the subset to a new CSV file
+    subset.to_csv(output_csv_file, index=False)
+
+    print(f"Saved {limit} SMILES to {output_csv_file}")
+
+# Usage
+csv_file_path = 'ChEMBL33.csv'
+output_csv_file = 'subset_smiles.csv'
+extract_smiles(csv_file_path, output_csv_file)
+
+
+############################function for removing unwanted data
+def remove_unwanted_data(filename_in='', filename_out='',  invalid=True, duplicates=True, salts=True, stereochem=True, canonicalize=True):
+    """Pre-processing of SMILES based on the user-defined parameters
+            :param filename_in     path to the file containing the SMILES to pretreat (SMILES only) -- default = ChEMBL
+            :param filename_out    path for file export -- default = ../data/
+            :param invalid         if True (default), removes invalid SMILES
+            :param duplicates      if True (default), removes duplicates
+            :param salts           if True (default), removes salts
+            :param stereochem      if True (default), removes stereochemistry
+            :param canonicalize    if True (default), produces canonical SMILES
+    """
+
+    from preprocessor import Preprocessor
+    p = Preprocessor(filename_in)
+
+    print(Fore.GREEN + 'Pre-processing of "' + filename_in + '" started.')
+
+
+    # user-defined pretreatment
+    if invalid:
+        p.remove_not_valid()
+        print(Fore.GREEN + ' invalid SMILES - removed.')
+        print(Style.RESET_ALL)
+
+    if duplicates:
+        p.remove_duplicates()
+        print(Fore.GREEN + ' duplicate SMILES - removed.')
+        print(Style.RESET_ALL)
+
+    if salts:
+        p.remove_salts()
+        print(Fore.GREEN + ' salts - removed.')
+        print(Style.RESET_ALL)
+
+    if stereochem:
+        p.remove_stereochem()
+        print(Fore.GREEN + ' stereochemistry - removed.')
+        print(Style.RESET_ALL)
+
+    if canonicalize:
+        p.canonicalize()
+        print(Fore.GREEN + ' canonicalized SMILES.')
+        print(Style.RESET_ALL)
+
+    #save data to file
+    p.save_data(filename_out)
+
+    # data = p.get_data()
+    # print(data[:5])
+# Usage
+remove_unwanted_data(filename_in='subset_smiles', filename_out='testPreprocessed_Data.csv')
+
+################################ Load the preprocessed data
+data = pd.read_csv('testPreprocessed_Data.csv', header=None, names=['canonical_smiles','HBD', 'HBA','MW', 'LogP'])
+
+print(data.columns)
+##############Function to calculate Lipinski descriptors
+def lipinski_descriptors(smiles):
+    """Calculates the descriptors that are within the Lipinski rule of 5 and adds them as separate columns to the data."""
+    mol = Chem.MolFromSmiles(smiles)
+    hbd = Descriptors.NumHDonors(mol)
+    hba = Descriptors.NumHAcceptors(mol)
+    mw = Descriptors.MolWt(mol)
+    logp = Descriptors.MolLogP(mol)
+    return hbd, hba, mw, logp
+
+# Apply the function to each row in the DataFrame data.apply is used to loop over the rows. Lambda function is short function.
+data[['HBD', 'HBA', 'MW', 'LogP']] = data.apply(
+    lambda row: lipinski_descriptors(row[0]), axis=1, result_type='expand')
+# Save the data with descriptors
+data= data.rename_axis('Canonical_Smiles', axis=1)###this dataframe is not correct
+data.to_csv('ChEMBL33_with_descriptors.csv', index=False)
+
+
+
+###########################################Creating dictionary that maps each unique character to an unique integer
+def create_dictionary(filename_in=''):
+    
+    Processed_Data= np.genfromtxt(filename_in,dtype='U')
+    unique_chars = sorted(list(OrderedDict.fromkeys(chain.from_iterable(Processed_Data)))) #list of all unique characters
+    char_to_int = dict((c, i) for i, c in enumerate(unique_chars)) #dict from character to int. 
+    int_to_char = dict((i, c) for i, c in enumerate(unique_chars)) #dict from int to character.
+    #add E character to indicate end of SMILES
+    char_to_int.update({"E" : len(char_to_int)})
+    int_to_char.update({len(int_to_char) : "E"})
+    return char_to_int, int_to_char
+
+char_to_int, int_to_char=create_dictionary('ChEMBL33_with_descriptors.csv')
+
+
+# make different subsets for the train and test data 
+def subset_splitting(num_subsets=6, step_size=25000): 
+    sample_sizes = [50000 + (i * step_size) for i in range(num_subsets)]
+    
+    #remove all subset sizes > than datafile size, as we cannot generate these
+    #sample_sizes = [size for size in sample_sizes if size < len(datafile)]
+    return sample_sizes
+sample_sizes= subset_splitting()
+
+
+dict_subset={}#initation of dictionary where groupsize is the key and the sub set the value
+def subset_creation(datafile, sample_sizes):#where datafile is a csv file, sample_sizes a list of the needed sample sizes
+    df = pd.read_csv(datafile)
+    for groupsize in sample_sizes:
+        subgroup=df.sample(groupsize, replace=True, random_state=42)
+        dict_subset[groupsize]=subgroup
+
+    return dict_subset
+data=subset_creation('ChEMBL33_with_descriptors.csv',sample_sizes)   
