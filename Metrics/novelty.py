@@ -6,9 +6,8 @@ Created on Sat Dec 16 00:25:29 2023
 """
 
 from rdkit import Chem
-from rdkit.Chem import inchi
 
-def calculate_novelty(smiles_list, dataset):
+def novelty(smiles_list, dataset):
     """
     Calculate the novelty of SMILES strings based on a dataset (chembl)
 
@@ -17,7 +16,7 @@ def calculate_novelty(smiles_list, dataset):
     - dataset (list): Reference dataset of SMILES strings.
 
     Returns:
-    - novelty_percentage (float): Percentage of novel SMILES strings.
+    - novelty_fraction (float): Percentage of novel SMILES strings.
     """
 
     unique_smiles = set(smiles_list)
@@ -28,14 +27,14 @@ def calculate_novelty(smiles_list, dataset):
     if not unique_smiles:
         return 0.0
 
-    novelty_percentage = (len(novel_smiles) / len(unique_smiles)) * 100
-    return novelty_percentage
+    novelty_fraction = (len(novel_smiles) / len(unique_smiles))
+    return novelty_fraction
 
 # Example usage:
 reference_dataset = ["CCO", "C1=CC=CC=C1", "CC(C)(C)C(=O)O"]
 
 smiles_to_check = ["CCO", "C1=CC=CC=C1", "InvalidSMILES", "CC(C)(C)C(=O)O", "CCN"]
 
-novelty_percentage = calculate_novelty(smiles_to_check, reference_dataset)
+novelty_fraction = novelty(smiles_to_check, reference_dataset)
 
-print(f"Novelty Percentage: {novelty_percentage:.2f}%")
+print(novelty_fraction)
