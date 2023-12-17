@@ -1,5 +1,5 @@
 from rdkit import Chem
-def validity_percentage(smiles_list):
+def validity(smiles_list):
     """
     Calculate the percentage of valid SMILES strings.
 
@@ -24,8 +24,25 @@ def validity_percentage(smiles_list):
     percentage_valid = (valid_smiles / total_smiles) * 100
     return percentage_valid
 
-# Example usage:
-smiles_to_check = ["CCO", "C1=CC=CC=C1", "InvalidSMILES", "CC(C)(C)C(=O)O"]
+def novelty(smiles_list, dataset):
+    """
+    Calculate the novelty of SMILES strings based on a dataset (chembl)
 
-percentage_valid = validity_percentage(smiles_to_check)
-print(percentage_valid)
+    Parameters:
+    - smiles_list (list): List of SMILES strings to check for novelty.
+    - dataset (list): Reference dataset of SMILES strings.
+
+    Returns:
+    - novelty_percentage (float): Percentage of novel SMILES strings.
+    """
+
+    unique_smiles = set(smiles_list)
+    unique_reference = set(dataset)
+
+    novel_smiles = unique_smiles - unique_reference
+
+    if not unique_smiles:
+        return 0.0
+
+    novelty_percentage = (len(novel_smiles) / len(unique_smiles)) * 100
+    return novelty_percentage
