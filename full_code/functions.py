@@ -11,23 +11,31 @@ import pandas as pd
 import numpy as np
 from rdkit import Chem
 from rdkit.Chem import Descriptors
+from Elements import elements
 
-def two_letter_elements(smiles_dataset):
+def data_filtering(smiles_dataset):
     two_letter_tokens = set()
-    pattern_two = re.compile(r'[A-Z][a-z]|[a-z]{2}') #capital+small & small+small
+    pattern_two = re.compile(r'\b[A-Z][a-z]?\b|\b[a-z]{2}\b')
     
     for smiles in smiles_dataset:
         matches_two = pattern_two.findall(smiles)
-
         # Collect chemically valid two-letter tokens
         two_letter_tokens.update(token for token in matches_two if token in elements)
-
-    #Replace chemically valid two-letter tokens with 'Z' in the dataset
-    for i, smiles in enumerate(smiles_dataset):
-        for token in two_letter_tokens:
-            smiles_dataset[i] = smiles_dataset[i].replace(token, 'Z')
     
-    return smiles_dataset, two_letter_tokens
+    two_letter_tokens.discard('Br')
+    two_letter_tokens.discard('Cl')
+    
+    filtered_smiles = [smiles for smiles in smiles_dataset if not any(element in smiles for element in two_letter_tokens)]
+    
+    replace = {'Br', 'Cl'}
+    modified_dataset = []
+    
+    for smiles in filtered_smiles:
+        modified_smiles = smiles
+        for token in replace:
+            modified_smiles = modified_smiles.replace(token, 'Z')
+        modified_dataset.append(modified_smiles)
+    return modified_dataset, two_letter_tokens
 
 
 def create_dictionary(smiles_dataset):
@@ -52,7 +60,7 @@ def create_dictionary(smiles_dataset):
     - `lc_elements`: list of one-letter chemical elements (both lower and uppercase) and valid SMILES symbols. 
     """
     one_letter_tokens = set()
-    pattern_one = re.compile('[A-Za-z0-9%\-+=#\(\)\[\]]') #hoofdletters, kleine letters + symbolen SMILES
+    pattern_one = re.compile('Br|Cl|[A-Za-z0-9%\-+=#\(\)\[\]]') #hoofdletters, kleine letters + symbolen SMILES
     
     
     for smiles in smiles_dataset:
@@ -142,11 +150,17 @@ def lipinski_descriptors(smiles):
         - 'LogP': The logarithm of the partition coefficient between octanol and water.
     """
     mol = Chem.MolFromSmiles(smiles)
-    hbd = Descriptors.NumHDonors(mol)
-    hba = Descriptors.NumHAcceptors(mol)
-    mw = Descriptors.MolWt(mol)
-    logp = Descriptors.MolLogP(mol)
-    return {'Hydrogen Bond Donors': hbd, 'Hydrogen Bond Acceptors': hba, 'Molecular Weight': mw, 'LogP': logp}
+    if mol is not None:
+        
+        hbd = Descriptors.NumHDonors(mol)
+        hba = Descriptors.NumHAcceptors(mol)
+        mw = Descriptors.MolWt(mol)
+        logp = Descriptors.MolLogP(mol)
+        return {'HBD': hbd, 'HBA': hba, 'MW': mw, 'LogP': logp}
+            
+    else:
+        # Return a default dictionary with NaN values
+        return {'HBD': float('nan'), 'HBA': float('nan'), 'MW': float('nan'), 'LogP': float('nan')}
 
 def visualisation_distributions(data, output_filename):
     """
@@ -191,6 +205,7 @@ def visualisation_distributions(data, output_filename):
         plt.ylabel('Density')
     
     data_with_descriptors.to_csv(output_filename, index=False)
+    
 
 def encoder(data, encode):
     """
