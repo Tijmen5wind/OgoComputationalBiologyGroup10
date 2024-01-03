@@ -9,12 +9,13 @@ from rdkit.Contrib.NP_Score import npscorer
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-def plot_np_scores_distribution_with_canonicalization(smiles_list):
+def plot_np_scores_distribution_with_canonicalization(smiles_list, output_filename='subset_20000_NP'):
     """
     Plot the distribution of Natural Product (NP) scores for a list of molecules after canonicalization.
 
     Parameters:
     - smiles_list (list): List of SMILES strings.
+    - output_filename (str): The filename for saving the plot. Default is 'subset_20000_NP'.
     """
 
     np_scores = []
@@ -34,11 +35,14 @@ def plot_np_scores_distribution_with_canonicalization(smiles_list):
     plt.title('Distribution of NP Scores')
     plt.xlabel('NP Score')
     plt.ylabel('Density')
+
+    # Save the plot as 'subset_20000_NP.jpg'
+    plt.savefig(f'{output_filename}.jpg', dpi=300)
     plt.show()
 
-# Example usage:
-smiles_list_to_check = ["CCO", "C1=CC=CC=C1", "CC(C)(C)C(=O)O", "CCN", "CCO", "C1=CC=CC=C1"]
-plot_np_scores_distribution_with_canonicalization(smiles_list_to_check)
+
+plot_np_scores_distribution_with_canonicalization(lijstje)
+
 
 
 
