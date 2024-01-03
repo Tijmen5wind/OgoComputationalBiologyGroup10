@@ -28,7 +28,7 @@ def validity_percentage(smiles_list):
     if total_smiles == 0:
         return 0.0
 
-    percentage_valid = (valid_smiles / total_smiles) * 100
+    percentage_valid =valid_smiles / 1000
     return percentage_valid
 
 # Example usage:
