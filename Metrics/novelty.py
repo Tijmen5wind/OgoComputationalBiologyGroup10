@@ -28,7 +28,7 @@ def calculate_novelty_with_canonicalization(smiles_list, reference_dataset):
 
     # Calculate novelty
     novel_smiles = sum(smiles not in reference_dataset for smiles in canonical_smiles_list)
-    novelty_percentage = (novel_smiles) / len(smiles_list)
+    novelty_percentage = (novel_smiles) / 1000
 
     return novelty_percentage
 
