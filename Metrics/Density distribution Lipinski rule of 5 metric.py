@@ -40,11 +40,7 @@ def lipinski_descriptors(smiles):
 def visualisation_distributions_with_canonicalization(smiles_list, output_filename):
     """
     Visualize density distributions of Lipinski descriptors for a list of SMILES strings after canonicalization
-    and save the results to a CSV file.
-
-    This function calculates Lipinski descriptors for each valid molecule in the provided list of SMILES strings,
-    canonicalizes the SMILES strings, creates a DataFrame with the descriptors, and visualizes the density distributions
-    of the descriptors. The resulting plots are saved to a file, and the DataFrame with descriptors is saved to a CSV file.
+    and save the results to a CSV file and a JPEG plot.
 
     Parameters:
     - smiles_list (list): List of SMILES strings.
@@ -53,11 +49,11 @@ def visualisation_distributions_with_canonicalization(smiles_list, output_filena
     Example:
     ```python
     smiles_list_to_check = ["CCO", "C1=CC=CC=C1", "CC(C)(C)C(=O)O", "CCN", "C(CCCCCCCC)CCCCCCCC(=O)O", "Invalid"]
-    output_filename = 'subset_50000_descr.csv'
+    output_filename = 'subset_50000_descr'
     visualisation_distributions(smiles_list_to_check, output_filename)
     ```
     Output:
-    - Saved visualizations in the current directory.
+    - Saved visualizations in the current directory as 'subset_50000_descr.jpg'.
     - Saved DataFrame with descriptors as 'subset_50000_descr.csv'.
     """
     descriptor_list = []
@@ -83,8 +79,14 @@ def visualisation_distributions_with_canonicalization(smiles_list, output_filena
         plt.xlabel(descriptor)
         plt.ylabel('Density')
     
-    dataframe.to_csv(output_filename, index=False)
+    # Save the plot as a JPEG file
+    plt.savefig(f'{output_filename}.jpg', dpi=300)
+    
+    # Save the DataFrame with descriptors as a CSV file
+    dataframe.to_csv(f'{output_filename}.csv', index=False)
+    
     return valid_smiles
+
 
 # Example usage:
 smiles_list_to_check = ["CCO", "C1=CC=CC=C1", "CC(C)(C)C(=O)O", "CCN", "C(CCCCCCCC)CCCCCCCC(=O)O", "Invalid"]
