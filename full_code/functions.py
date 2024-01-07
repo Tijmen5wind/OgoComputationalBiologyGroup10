@@ -6,7 +6,7 @@ Created on Tue Dec 19 10:59:50 2023
 """
 
 import re
-from Elements import elements, lc_elements
+from Elements import lc_elements
 import pandas as pd
 import numpy as np
 from rdkit import Chem
@@ -17,30 +17,53 @@ import seaborn as sns
 
 
 def data_filtering(smiles_dataset):
+    """
+    Filters and modifies a dataset of SMILES (Simplified Molecular Input Line Entry System) notations.
+
+    Args:
+    - smiles_dataset (list): A list of SMILES strings.
+
+    Returns:
+    - modified_dataset (list): A list of modified SMILES strings where 'Br' and 'Cl' are replaced with 'Z'.
+    - two_letter_tokens (set): A set of unique two-letter tokens found in the dataset.
+    """
+
+    # Initialize a set to store unique two-letter tokens
     two_letter_tokens = set()
+
+    # Compile a regex pattern to find two-letter tokens
     pattern_two = re.compile(r'\b[A-Z][a-z]?\b|\b[a-z]{2}\b')
 
+    # Iterate over the SMILES dataset
     for smiles in smiles_dataset:
+        # Find all matches for the pattern in each SMILES string
         matches_two = pattern_two.findall(smiles)
-        # Collect chemically valid two-letter tokens
+
+        # Update the set with valid two-letter tokens found in SMILES
         two_letter_tokens.update(token for token in matches_two if token in elements)
 
+    # Remove specific elements ('Br' and 'Cl') from the set of tokens
     two_letter_tokens.discard('Br')
     two_letter_tokens.discard('Cl')
 
-    filtered_smiles = [smiles for smiles in smiles_dataset if
-                       not any(element in smiles for element in two_letter_tokens)]
+    # Filter out SMILES strings containing any of the two-letter tokens
+    filtered_smiles = [
+        smiles for smiles in smiles_dataset
+        if not any(element in smiles for element in two_letter_tokens)
+    ]
 
+    # Define tokens to be replaced
     replace = {'Br', 'Cl'}
     modified_dataset = []
 
+    # Modify the filtered dataset by replacing specified tokens with 'Z'
     for smiles in filtered_smiles:
         modified_smiles = smiles
         for token in replace:
             modified_smiles = modified_smiles.replace(token, 'Z')
         modified_dataset.append(modified_smiles)
-    return modified_dataset, two_letter_tokens
 
+    return modified_dataset, two_letter_tokens
 
 def create_dictionary(smiles_dataset):
     """
@@ -169,7 +192,7 @@ def lipinski_descriptors(smiles):
         return {'HBD': float('nan'), 'HBA': float('nan'), 'MW': float('nan'), 'LogP': float('nan')}
 
 
-def visualisation_distributions(data, output_filename, subset_size):
+def visualisation_distributions(subset_dict, output_filename):
     """
     Visualize density distributions of Lipinski descriptors and save the results to a CSV file.
 
@@ -194,36 +217,33 @@ def visualisation_distributions(data, output_filename, subset_size):
     - Saved visualizations in the current directory.
     - Saved DataFrame with descriptors as 'lipinski_distributions.csv'.
     """
-    descriptor_list = []
-    for smiles in data['canonical_smiles']:
-        descriptor_list.append(lipinski_descriptors(smiles))
-    dataframe = pd.DataFrame(descriptor_list)
-    data = data.reset_index(drop=True)
-    dataframe = dataframe.reset_index(drop=True)
-    data_with_descriptors = pd.concat([data, dataframe], axis=1)
+    all_descriptors = []
 
-    descriptor_columns = list(data_with_descriptors.columns)[1:]
+    # Collecting descriptors for all subsets
+    for key, data in subset_dict.items():
+        descriptor_list = [lipinski_descriptors(smiles) for smiles in data['canonical_smiles']]
+        for descriptor in descriptor_list:
+            descriptor['Subset Size'] = key  # Add subset size for identification
+        all_descriptors.extend(descriptor_list)
 
-    axis_limits = {
-        'HBD': {'x': [-3, 15], 'y': [0, 0.35]},
-        'HBA': {'x': [-5, 20], 'y': [0, 0.20]},
-        'MW': {'x': [-180, 1250], 'y': [0, 0.004]},
-        'LogP': {'x': [-10, 20], 'y': [0, 0.25]}
-    }
+    # Creating a combined DataFrame
+    combined_data = pd.DataFrame(all_descriptors)
 
     # Set the figure size and plot the distributions
-    plt.figure(figsize=(15, 8))
+    plt.figure(figsize=(15, 10))
 
-    for i, descriptor in enumerate(descriptor_columns, 1):
+    for i, descriptor in enumerate(['HBD', 'HBA', 'MW', 'LogP'], 1):
         plt.subplot(2, 2, i)
-        sns.kdeplot(data_with_descriptors[descriptor], fill=True, color=f'C{i}', lw=2)
+        for subset_size in subset_dict.keys():
+            subset_data = combined_data[combined_data['Subset Size'] == subset_size]
+            sns.kdeplot(subset_data[descriptor], label=f'Subset {subset_size}', fill=True, lw=2)
         plt.xlabel(descriptor)
         plt.ylabel('Density')
-        plt.xlim(axis_limits[descriptor]['x'])  # Set x-axis range
-        plt.ylim(axis_limits[descriptor]['y'])  # Set y-axis range
+        plt.title(f'Density Distribution of {descriptor}')
+        plt.legend()
 
-    plt.suptitle(f'Density Distributions of Lipinski Descriptors for Subset Size: {subset_size}', fontsize=16, fontweight='bold')
-    data_with_descriptors.to_csv(output_filename, index=False)
+    plt.suptitle('Density Distributions of Lipinski Descriptors Across Subsets', fontsize=16, fontweight='bold')
+    plt.savefig(output_filename)
 
 def encoder(data, encode):
     """

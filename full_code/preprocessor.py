@@ -5,11 +5,9 @@ Implementation of all preprocessing steps
 import pandas as pd
 import numpy as np
 from rdkit import Chem
-import sys
 import os
 
 np.random.seed(1)
-
 
 class Preprocessor:
 
@@ -61,6 +59,7 @@ class Preprocessor:
         if self._duplicates_removed:
             self.remove_duplicates()
 
+
     def remove_token(self, t):
         """Remove token t from all elements of data
         :param t:   token to remove
@@ -96,10 +95,12 @@ class Preprocessor:
         self._data = canonical_smiles.to_numpy()
         if self._duplicates_removed:
             self.remove_duplicates()
+
     def save_data(self, name='data.csv'):
+        """Saves data to file"""
         pd.DataFrame(self._data).to_csv(name, header=None, index=None)
         return
 
     def get_data(self):
+        """Returns data"""
         return self._data
-
