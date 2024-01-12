@@ -29,7 +29,7 @@ def uniqueness_with_canonicalization(smiles_list):
     # Count the percentage of unique SMILES
     unique_smiles_set = set(canonical_smiles_list)
     unique_count = len(unique_smiles_set)
-    uniqueness = unique_count / len(smiles_list)
+    uniqueness = unique_count / len(canonical_smiles_list)
 
     return uniqueness
 
